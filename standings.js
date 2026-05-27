@@ -2,108 +2,152 @@
 //  World Cup 2026 Sweepstakes — standings.js
 // ─────────────────────────────────────────────
 
-// ── Players ──────────────────────────────────
-// TODO: update names and add/remove entries as needed
+// ── Config ────────────────────────────────────
+const SHEET_ID = "2PACX-1vQiCswyzh7OoxCglMTk3tCiOrlVzNsue4Yi1iOHYoTvcPGjtpNS_sSiGjCEznGstW52LuZw7rhkrKoa";
+
 const PLAYERS = [
-  { id: "angelo",      name: "Rafael Angelo",      bracket: "" },
-  { id: "collette",    name: "David Collette",      bracket: "" },
-  { id: "duca",        name: "Ruxi Duca",           bracket: "" },
-  { id: "garcia",      name: "Alex Garcia",         bracket: "" },
-  { id: "georgiadis",  name: "Kostas Georgiadis",   bracket: "" },
-  { id: "leiro",       name: "Alejandro Leiro",     bracket: "" },
-  { id: "miranda",     name: "Sebastian Miranda",   bracket: "" },
-  { id: "ortiz",       name: "Sebastian Ortiz",     bracket: "" },
-  { id: "parra",       name: "Chito Parra",         bracket: "" },
-  { id: "paredes",     name: "Diego Paredes",       bracket: "" },
-  { id: "riart",       name: "Nico Riart",          bracket: "" },
-  { id: "staszak",     name: "Meredith Staszak",    bracket: "" },
-  { id: "vasconcelos", name: "Joao Vasconcelos",    bracket: "" },
+  { id: "angelo",      name: "Rafael Angelo",     bracket: "" },
+  { id: "colette",     name: "David Colette",      bracket: "" },
+  { id: "despuig",     name: "Sebas Despuig",      bracket: "" },
+  { id: "duca",        name: "Ruxi Duca",          bracket: "" },
+  { id: "fernandez",   name: "Chris Fernandez",    bracket: "" },
+  { id: "garcia",      name: "Alex Garcia",        bracket: "" },
+  { id: "georgiadis",  name: "Kostas Georgiadis",  bracket: "" },
+  { id: "leiro",       name: "Alejandro Leiro",    bracket: "" },
+  { id: "miranda",     name: "Sebas Miranda",      bracket: "" },
+  { id: "ortiz",       name: "Sebas Ortiz",        bracket: "" },
+  { id: "paredes",     name: "Diego Paredes",      bracket: "" },
+  { id: "parra",       name: "Chito Parra",        bracket: "" },
+  { id: "riart",       name: "Nico Riart",         bracket: "" },
+  { id: "vasconcelos", name: "Joao Vasconcelos",   bracket: "" },
 ];
 
-// ── Teams ─────────────────────────────────────
-// TODO: replace with the 48 qualified teams for 2026
-const TEAMS = [];
-
-// ── Match schedule ────────────────────────────
-// Format: [teamA, teamB]
-// TODO: fill in the full group-stage schedule (104 matches)
-const MATCHES = [];
-
-// ── Actual results ────────────────────────────
-// Format: [goalsA, goalsB] or null for unplayed
-// TODO: update as matches are played
-const RESULTS = MATCHES.map(() => null);
-
-// ── Player predictions ────────────────────────
-// Each entry is an array parallel to MATCHES: [goalsA, goalsB]
-// TODO: fill in each player's predictions once collected
-const PREDICTIONS = {
-  angelo:      MATCHES.map(() => [0, 0]),
-  collette:    MATCHES.map(() => [0, 0]),
-  duca:        MATCHES.map(() => [0, 0]),
-  garcia:      MATCHES.map(() => [0, 0]),
-  georgiadis:  MATCHES.map(() => [0, 0]),
-  leiro:       MATCHES.map(() => [0, 0]),
-  miranda:     MATCHES.map(() => [0, 0]),
-  ortiz:       MATCHES.map(() => [0, 0]),
-  parra:       MATCHES.map(() => [0, 0]),
-  paredes:     MATCHES.map(() => [0, 0]),
-  riart:       MATCHES.map(() => [0, 0]),
-  staszak:     MATCHES.map(() => [0, 0]),
-  vasconcelos: MATCHES.map(() => [0, 0]),
-};
-
-// ── Scoring rules ─────────────────────────────
-// TODO: update points once the 2026 rules are decided
 const POINTS = {
-  exact:   3,   // exact scoreline
-  outcome: 1,   // correct outcome (W/D/L) only
+  exact:   3,  // correct scoreline
+  outcome: 1,  // correct outcome (W/D/L) only
 };
+
+// ─────────────────────────────────────────────
+//  Google Sheets CSV fetching
+//
+//  Sheet must be published via:
+//  File → Share → Publish to web → choose tab → CSV
+//
+//  Expected tab names: "schedule", "results", "predictions"
+//
+//  schedule columns:    match_id | team_a | team_b
+//  results columns:     match_id | score_a | score_b   (leave blank if unplayed)
+//  predictions columns: match_id | angelo | colette | despuig | duca | fernandez |
+//                       garcia | georgiadis | leiro | miranda | ortiz |
+//                       paredes | parra | riart | vasconcelos
+//                       (each cell formatted as "score_a-score_b", e.g. "2-1")
+// ─────────────────────────────────────────────
+
+function sheetUrl(tabName) {
+  return `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?output=csv&sheet=${encodeURIComponent(tabName)}`;
+}
+
+async function fetchSheet(tabName) {
+  const res = await fetch(sheetUrl(tabName));
+  if (!res.ok) throw new Error(`Could not load the "${tabName}" tab (HTTP ${res.status})`);
+  return parseCSV(await res.text());
+}
+
+// ── CSV parser ────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split("\n");
+  if (lines.length < 2) return [];
+  const headers = parseCSVRow(lines[0]).map(h => h.trim());
+  return lines.slice(1).map(line => {
+    const values = parseCSVRow(line);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (values[i] ?? "").trim(); });
+    return obj;
+  });
+}
+
+function parseCSVRow(line) {
+  const result = [];
+  let current = "";
+  let inQuotes = false;
+  for (const ch of line) {
+    if (ch === '"') { inQuotes = !inQuotes; }
+    else if (ch === ',' && !inQuotes) { result.push(current); current = ""; }
+    else { current += ch; }
+  }
+  result.push(current);
+  return result;
+}
+
+// ─────────────────────────────────────────────
+//  Data builders
+// ─────────────────────────────────────────────
+
+function buildMatches(rows) {
+  return rows.map(r => ({
+    id:    r.match_id,
+    teamA: r.team_a,
+    teamB: r.team_b,
+  }));
+}
+
+function buildResults(rows) {
+  const map = {};
+  rows.forEach(r => {
+    const a = r.score_a, b = r.score_b;
+    map[r.match_id] = (a !== "" && b !== "") ? [parseInt(a), parseInt(b)] : null;
+  });
+  return map;
+}
+
+function buildPredictions(rows) {
+  const map = {};
+  PLAYERS.forEach(p => { map[p.id] = {}; });
+  rows.forEach(r => {
+    PLAYERS.forEach(p => {
+      const val = (r[p.id] ?? "").trim();
+      if (val.includes("-")) {
+        const [a, b] = val.split("-").map(Number);
+        map[p.id][r.match_id] = [a, b];
+      } else {
+        map[p.id][r.match_id] = null;
+      }
+    });
+  });
+  return map;
+}
 
 // ─────────────────────────────────────────────
 //  Scoring logic
 // ─────────────────────────────────────────────
 
 function getOutcome(a, b) {
-  if (a > b) return "W";
-  if (a < b) return "L";
-  return "D";
+  return a > b ? "W" : a < b ? "L" : "D";
 }
 
 function scoreMatch(result, prediction) {
-  if (!result) return { exact: false, outcome: false };
+  if (!result || !prediction) return { exact: false, outcome: false };
   const exact = result[0] === prediction[0] && result[1] === prediction[1];
   const outcome = getOutcome(result[0], result[1]) === getOutcome(prediction[0], prediction[1]);
   return { exact, outcome };
 }
 
-function computeStandings() {
-  return PLAYERS.map((player) => {
-    let exactCount = 0;
-    let outcomeCount = 0;
-
-    MATCHES.forEach((_, i) => {
-      const { exact, outcome } = scoreMatch(RESULTS[i], PREDICTIONS[player.id][i]);
-      if (exact) { exactCount++; }
-      else if (outcome) { outcomeCount++; }
+function computeStandings(matches, results, predictions) {
+  return PLAYERS.map(player => {
+    let exactCount = 0, outcomeCount = 0;
+    matches.forEach(match => {
+      const { exact, outcome } = scoreMatch(results[match.id], predictions[player.id][match.id]);
+      if (exact) exactCount++;
+      else if (outcome) outcomeCount++;
     });
-
     const total = exactCount * POINTS.exact + outcomeCount * POINTS.outcome;
-    return { player, total, outcomeCount, exactCount };
+    return { player, total, exactCount, outcomeCount };
   }).sort((a, b) => b.total - a.total || b.exactCount - a.exactCount);
 }
 
 // ─────────────────────────────────────────────
-//  DOM rendering
+//  Rendering
 // ─────────────────────────────────────────────
-
-function formatScore(pred) {
-  return `${pred[0]} x ${pred[1]}`;
-}
-
-function formatResult(result) {
-  return result ? `${result[0]} x ${result[1]}` : "---";
-}
 
 function ordinal(n) {
   const s = ["th", "st", "nd", "rd"];
@@ -121,39 +165,34 @@ function renderStandings(standings) {
       <td>${row.player.name}</td>
       <td>${row.total}</td>
       <td>${row.outcomeCount}</td>
-      <td>${row.exactCount}</td>
-    `;
+      <td>${row.exactCount}</td>`;
     tbody.appendChild(tr);
   });
 }
 
-function renderResults() {
+function renderResults(matches, results, predictions) {
   const header = document.getElementById("results-header");
-  const tbody = document.querySelector("#results-table tbody");
+  const tbody  = document.querySelector("#results-table tbody");
 
-  // inject player column headers
-  PLAYERS.forEach((p) => {
+  PLAYERS.forEach(p => {
     const th = document.createElement("th");
-    th.textContent = p.name.split(" ")[1] || p.name;
+    th.textContent = p.name.split(" ").slice(-1)[0];
     header.appendChild(th);
   });
 
-  // one row per match
-  MATCHES.forEach((match, i) => {
-    const result = RESULTS[i];
+  matches.forEach(match => {
+    const result = results[match.id];
     const tr = document.createElement("tr");
+    let cells = `
+      <td>${match.teamA} v ${match.teamB}</td>
+      <td>${result ? `${result[0]}–${result[1]}` : "—"}</td>`;
 
-    const matchLabel = `${match[0]} x ${match[1]}`;
-    let cells = `<td>${matchLabel}</td><td>${formatResult(result)}</td>`;
-
-    PLAYERS.forEach((player) => {
-      const pred = PREDICTIONS[player.id][i];
+    PLAYERS.forEach(player => {
+      const pred = predictions[player.id][match.id];
       const { exact, outcome } = scoreMatch(result, pred);
       let cls = "pending";
-      if (result) {
-        cls = exact ? "exact" : outcome ? "outcome" : "wrong";
-      }
-      cells += `<td class="${cls}">${formatScore(pred)}</td>`;
+      if (result) cls = exact ? "exact" : outcome ? "outcome" : "wrong";
+      cells += `<td class="${cls}">${pred ? `${pred[0]}–${pred[1]}` : "—"}</td>`;
     });
 
     tr.innerHTML = cells;
@@ -163,22 +202,49 @@ function renderResults() {
 
 function renderBrackets() {
   const tbody = document.getElementById("brackets-body");
-  PLAYERS.forEach((p) => {
+  PLAYERS.forEach(p => {
     const tr = document.createElement("tr");
-    const link = p.bracket
-      ? `<a href="${p.bracket}" target="_blank">View</a>`
-      : "—";
+    const link = p.bracket ? `<a href="${p.bracket}" target="_blank">View</a>` : "—";
     tr.innerHTML = `<td>${p.name}</td><td>${link}</td>`;
     tbody.appendChild(tr);
   });
+}
+
+// ── Loading / error states ────────────────────
+function showLoading(visible) {
+  document.getElementById("loading").style.display = visible ? "block" : "none";
+}
+
+function showError(msg) {
+  showLoading(false);
+  const el = document.getElementById("error");
+  el.textContent = msg;
+  el.style.display = "block";
 }
 
 // ─────────────────────────────────────────────
 //  Entry point
 // ─────────────────────────────────────────────
 
-document.addEventListener("DOMContentLoaded", () => {
-  renderResults();
-  renderStandings(computeStandings());
-  renderBrackets();
+document.addEventListener("DOMContentLoaded", async () => {
+  showLoading(true);
+  try {
+    const [scheduleRows, resultsRows, predictionsRows] = await Promise.all([
+      fetchSheet("schedule"),
+      fetchSheet("results"),
+      fetchSheet("predictions"),
+    ]);
+
+    const matches     = buildMatches(scheduleRows);
+    const results     = buildResults(resultsRows);
+    const predictions = buildPredictions(predictionsRows);
+
+    renderResults(matches, results, predictions);
+    renderStandings(computeStandings(matches, results, predictions));
+    renderBrackets();
+  } catch (err) {
+    showError(`Could not load data. (${err.message})`);
+  } finally {
+    showLoading(false);
+  }
 });

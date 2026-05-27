@@ -100,6 +100,27 @@ td.pending { color: #546e7a; }
 }
 #brackets-table a:hover { text-decoration: underline; }
 
+/* ── Loading / error ── */
+#loading {
+  display: none;
+  text-align: center;
+  padding: 3rem;
+  color: #90a4ae;
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+}
+
+#error {
+  display: none;
+  text-align: center;
+  padding: 2rem;
+  color: #ef9a9a;
+  background: #1a0a0a;
+  border: 1px solid #b71c1c;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
 /* ── Responsive ── */
 @media (max-width: 600px) {
   th, td { padding: 0.4rem 0.5rem; font-size: 0.78rem; }
