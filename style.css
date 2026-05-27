@@ -1,0 +1,106 @@
+/* ── Reset & base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #0a0e1a;
+  color: #e8eaf0;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+header {
+  background: linear-gradient(135deg, #1a237e 0%, #283593 60%, #0d47a1 100%);
+  padding: 2rem 1.5rem;
+  text-align: center;
+  border-bottom: 3px solid #f9a825;
+}
+
+header h1 {
+  font-size: clamp(1.6rem, 4vw, 2.8rem);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* ── Main layout ── */
+main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+/* ── Section headings ── */
+section h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f9a825;
+  margin-bottom: 1rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 2px solid #f9a82540;
+}
+
+/* ── Tables (shared) ── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th, td {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #1e2740;
+  text-align: center;
+  white-space: nowrap;
+}
+
+thead th {
+  background: #1a237e;
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+tbody tr:nth-child(even) { background: #101628; }
+tbody tr:nth-child(odd)  { background: #0d1120; }
+tbody tr:hover           { background: #1c2440; }
+
+/* ── Standings table ── */
+#standings-table td:first-child {
+  font-weight: 700;
+  color: #f9a825;
+  width: 3rem;
+}
+
+/* ── Results table ── */
+#results-wrapper {
+  overflow-x: auto;
+  border-radius: 6px;
+}
+
+/* color codes */
+td.exact   { background: #1b5e20 !important; color: #a5d6a7; font-weight: 600; }
+td.outcome { background: #f57f17 !important; color: #fff8e1; font-weight: 600; }
+td.wrong   { background: #b71c1c !important; color: #ffcdd2; }
+td.pending { color: #546e7a; }
+
+/* ── Brackets table ── */
+#brackets-table a {
+  color: #64b5f6;
+  text-decoration: none;
+}
+#brackets-table a:hover { text-decoration: underline; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  th, td { padding: 0.4rem 0.5rem; font-size: 0.78rem; }
+}

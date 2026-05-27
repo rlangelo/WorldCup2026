@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>World Cup 2026 Sweepstakes</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <h1>World Cup 2026 Sweepstakes</h1>
+  </header>
+
+  <main>
+
+    <!-- STANDINGS -->
+    <section id="section-standings">
+      <h2>Standings</h2>
+      <table id="standings-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Player</th>
+            <th>Total Score</th>
+            <th>Correct Outcome</th>
+            <th>Exact Score</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- RESULTS -->
+    <section id="section-results">
+      <h2>Results</h2>
+      <div id="results-wrapper">
+        <table id="results-table">
+          <thead>
+            <tr id="results-header">
+              <th>Match</th>
+              <th>Result</th>
+              <!-- player columns injected by JS -->
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- BRACKETS -->
+    <section id="section-brackets">
+      <h2>Brackets</h2>
+      <table id="brackets-table">
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th>Bracket</th>
+          </tr>
+        </thead>
+        <tbody id="brackets-body">
+          <!-- injected by JS -->
+        </tbody>
+      </table>
+    </section>
+
+  </main>
+
+  <script src="standings.js"></script>
+</body>
+</html>
