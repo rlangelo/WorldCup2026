@@ -246,6 +246,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       fetchSheet("predictions"),
     ]);
 
+    console.log("schedule row 0:", scheduleRows[0]);
+    console.log("results row 0:", resultsRows[0]);
+    console.log("predictions row 0:", predictionsRows[0]);
+
     const matches     = buildMatches(scheduleRows);
     const results     = buildResults(resultsRows);
     const predictions = buildPredictions(predictionsRows);
