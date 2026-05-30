@@ -87,11 +87,14 @@ tbody tr:hover           { background: #1c2440; }
   border-radius: 6px;
 }
 
-/* color codes */
-td.exact   { background: #1b5e20 !important; color: #a5d6a7; font-weight: 600; }
-td.outcome { background: #f57f17 !important; color: #fff8e1; font-weight: 600; }
-td.wrong   { background: #b71c1c !important; color: #ffcdd2; }
-td.pending { color: #546e7a; }
+/* color codes — 25/18/15/12/10/0 pts */
+td.exact        { background: #1b5e20 !important; color: #a5d6a7; font-weight: 600; }
+td.goal_diff    { background: #004d40 !important; color: #80cbc4; font-weight: 600; }
+td.winner_goals { background: #0d47a1 !important; color: #90caf9; font-weight: 600; }
+td.loser_goals  { background: #311b92 !important; color: #ce93d8; font-weight: 600; }
+td.winner       { background: #e65100 !important; color: #ffe0b2; font-weight: 600; }
+td.wrong        { background: #b71c1c !important; color: #ffcdd2; }
+td.pending      { color: #546e7a; }
 
 /* ── Brackets table ── */
 #brackets-table a {

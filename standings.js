@@ -21,8 +21,11 @@ const PLAYERS = [
 ];
 
 const POINTS = {
-  exact:   3,  // correct scoreline
-  outcome: 1,  // correct outcome (W/D/L) only
+  exact:       25,
+  goalDiff:    18,
+  winnerGoals: 15,
+  loserGoals:  12,
+  winner:      10,
 };
 
 // ─────────────────────────────────────────────
@@ -119,28 +122,40 @@ function buildPredictions(rows) {
 //  Scoring logic
 // ─────────────────────────────────────────────
 
-function getOutcome(a, b) {
-  return a > b ? "W" : a < b ? "L" : "D";
-}
-
 function scoreMatch(result, prediction) {
-  if (!result || !prediction) return { exact: false, outcome: false };
-  const exact = result[0] === prediction[0] && result[1] === prediction[1];
-  const outcome = getOutcome(result[0], result[1]) === getOutcome(prediction[0], prediction[1]);
-  return { exact, outcome };
+  if (!result || !prediction) return { points: null, tier: "pending" };
+
+  const [ra, rb] = result;
+  const [pa, pb] = prediction;
+
+  const resultSide = ra > rb ? "A" : ra < rb ? "B" : "D";
+  const predSide   = pa > pb ? "A" : pa < pb ? "B" : "D";
+
+  if (resultSide !== predSide)                       return { points: 0,                   tier: "wrong"       };
+  if (ra === pa && rb === pb)                        return { points: POINTS.exact,         tier: "exact"       };
+  if (Math.abs(ra - rb) === Math.abs(pa - pb))       return { points: POINTS.goalDiff,      tier: "goal_diff"   };
+
+  // Draw predictions always reach goalDiff (diff=0=0), so below is non-draw only.
+  const winnerGoals = resultSide === "A" ? ra : rb;
+  const loserGoals  = resultSide === "A" ? rb : ra;
+  const predWinner  = resultSide === "A" ? pa : pb;
+  const predLoser   = resultSide === "A" ? pb : pa;
+
+  if (predWinner === winnerGoals) return { points: POINTS.winnerGoals, tier: "winner_goals" };
+  if (predLoser  === loserGoals)  return { points: POINTS.loserGoals,  tier: "loser_goals"  };
+
+  return { points: POINTS.winner, tier: "winner" };
 }
 
 function computeStandings(matches, results, predictions) {
   return PLAYERS.map(player => {
-    let exactCount = 0, outcomeCount = 0;
+    let total = 0;
     matches.forEach(match => {
-      const { exact, outcome } = scoreMatch(results[match.id], predictions[player.id][match.id]);
-      if (exact) exactCount++;
-      else if (outcome) outcomeCount++;
+      const { points } = scoreMatch(results[match.id], predictions[player.id][match.id]);
+      if (points) total += points;
     });
-    const total = exactCount * POINTS.exact + outcomeCount * POINTS.outcome;
-    return { player, total, exactCount, outcomeCount };
-  }).sort((a, b) => b.total - a.total || b.exactCount - a.exactCount);
+    return { player, total };
+  }).sort((a, b) => b.total - a.total);
 }
 
 // ─────────────────────────────────────────────
@@ -161,9 +176,7 @@ function renderStandings(standings) {
     tr.innerHTML = `
       <td>${ordinal(i + 1)}</td>
       <td>${row.player.name}</td>
-      <td>${row.total}</td>
-      <td>${row.outcomeCount}</td>
-      <td>${row.exactCount}</td>`;
+      <td>${row.total}</td>`;
     tbody.appendChild(tr);
   });
 }
@@ -187,10 +200,10 @@ function renderResults(matches, results, predictions) {
 
     PLAYERS.forEach(player => {
       const pred = predictions[player.id][match.id];
-      const { exact, outcome } = scoreMatch(result, pred);
-      let cls = "pending";
-      if (result) cls = exact ? "exact" : outcome ? "outcome" : "wrong";
-      cells += `<td class="${cls}">${pred ? `${pred[0]}–${pred[1]}` : "—"}</td>`;
+      const { points, tier } = scoreMatch(result, pred);
+      const predStr = pred ? `${pred[0]}–${pred[1]}` : "—";
+      const label = (tier === "pending") ? predStr : `${predStr} (${points})`;
+      cells += `<td class="${tier}">${label}</td>`;
     });
 
     tr.innerHTML = cells;
