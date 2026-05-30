@@ -32,10 +32,9 @@ const POINTS = {
 //  Google Sheets CSV fetching
 //
 //  Sheet must be published via:
-//  File → Share → Publish to web → choose tab → CSV
+//  File → Share → Publish to web → Entire Document
 //
-//  Expected tab names: "schedule", "results", "predictions"
-//
+//  Tab gids (from the #gid= value in the sheet's edit URL):
 //  schedule columns:    match_id | team_a | team_b
 //  results columns:     match_id | score_a | score_b   (leave blank if unplayed)
 //  predictions columns: match_id | angelo | despuig | duca | fernandez |
@@ -44,13 +43,19 @@ const POINTS = {
 //                       (each cell formatted as "score_a-score_b", e.g. "2-1")
 // ─────────────────────────────────────────────
 
-function sheetUrl(tabName) {
-  return `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?output=csv&sheet=${encodeURIComponent(tabName)}`;
+const SHEET_GIDS = {
+  schedule:    0,
+  results:     712569962,
+  predictions: 1644574011,
+};
+
+function sheetUrl(gid) {
+  return `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?gid=${gid}&single=true&output=csv`;
 }
 
-async function fetchSheet(tabName) {
-  const res = await fetch(sheetUrl(tabName));
-  if (!res.ok) throw new Error(`Could not load the "${tabName}" tab (HTTP ${res.status})`);
+async function fetchSheet(name, gid) {
+  const res = await fetch(sheetUrl(gid));
+  if (!res.ok) throw new Error(`Could not load the "${name}" tab (HTTP ${res.status})`);
   return parseCSV(await res.text());
 }
 
@@ -241,14 +246,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   showLoading(true);
   try {
     const [scheduleRows, resultsRows, predictionsRows] = await Promise.all([
-      fetchSheet("schedule"),
-      fetchSheet("results"),
-      fetchSheet("predictions"),
+      fetchSheet("schedule",     SHEET_GIDS.schedule),
+      fetchSheet("results",      SHEET_GIDS.results),
+      fetchSheet("predictions",  SHEET_GIDS.predictions),
     ]);
-
-    console.log("schedule row 0:", scheduleRows[0]);
-    console.log("results row 0:", resultsRows[0]);
-    console.log("predictions row 0:", predictionsRows[0]);
 
     const matches     = buildMatches(scheduleRows);
     const results     = buildResults(resultsRows);
