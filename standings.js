@@ -44,9 +44,20 @@ const POINTS = {
 // ─────────────────────────────────────────────
 
 const SHEET_GIDS = {
-  schedule:    0,
-  results:     712569962,
-  predictions: 1644574011,
+  schedule:           0,
+  results:            712569962,
+  predictions:        1644574011,
+  specialPredictions: 89695487,
+  specialResults:     1115044732,
+};
+
+// special_predictions columns: player_name | champion | vice_champion | golden_boot
+// special_results columns:     champion | vice_champion | golden_boot   (one data row)
+
+const SPECIAL_POINTS = {
+  champion:    100,
+  viceChampion: 50,
+  goldenBoot:   75,
 };
 
 function sheetUrl(gid) {
@@ -123,6 +134,31 @@ function buildPredictions(rows) {
   return map;
 }
 
+function buildSpecialPredictions(rows) {
+  const map = {};
+  rows.forEach(r => {
+    const id = (r.player_name ?? "").trim();
+    if (id) {
+      map[id] = {
+        champion:     (r.champion      ?? "").trim(),
+        viceChampion: (r.vice_champion ?? "").trim(),
+        goldenBoot:   (r.golden_boot   ?? "").trim(),
+      };
+    }
+  });
+  return map;
+}
+
+function buildSpecialResults(rows) {
+  if (!rows.length) return null;
+  const r = rows[0];
+  const champion     = (r.champion      ?? "").trim();
+  const viceChampion = (r.vice_champion ?? "").trim();
+  const goldenBoot   = (r.golden_boot   ?? "").trim();
+  if (!champion && !viceChampion && !goldenBoot) return null;
+  return { champion, viceChampion, goldenBoot };
+}
+
 // ─────────────────────────────────────────────
 //  Scoring logic
 // ─────────────────────────────────────────────
@@ -152,13 +188,24 @@ function scoreMatch(result, prediction) {
   return { points: POINTS.winner, tier: "winner" };
 }
 
-function computeStandings(matches, results, predictions) {
+function computeSpecialScore(specialResults, playerPreds) {
+  if (!specialResults || !playerPreds) return 0;
+  let total = 0;
+  const cmp = (a, b) => a && b && a.toLowerCase() === b.toLowerCase();
+  if (cmp(specialResults.champion,     playerPreds.champion))     total += SPECIAL_POINTS.champion;
+  if (cmp(specialResults.viceChampion, playerPreds.viceChampion)) total += SPECIAL_POINTS.viceChampion;
+  if (cmp(specialResults.goldenBoot,   playerPreds.goldenBoot))   total += SPECIAL_POINTS.goldenBoot;
+  return total;
+}
+
+function computeStandings(matches, results, predictions, specialResults, specialPredictions) {
   return PLAYERS.map(player => {
     let total = 0;
     matches.forEach(match => {
       const { points } = scoreMatch(results[match.id], predictions[player.id][match.id]);
       if (points) total += points;
     });
+    total += computeSpecialScore(specialResults, specialPredictions[player.id]);
     return { player, total };
   }).sort((a, b) => b.total - a.total);
 }
@@ -216,6 +263,53 @@ function renderResults(matches, results, predictions) {
   });
 }
 
+function renderSpecialPredictions(specialResults, specialPredictions) {
+  const header = document.getElementById("special-header");
+  const tbody  = document.querySelector("#special-table tbody");
+
+  PLAYERS.forEach(p => {
+    const th = document.createElement("th");
+    th.textContent = p.name.split(" ").slice(-1)[0];
+    header.appendChild(th);
+  });
+
+  const categories = [
+    { key: "champion",     label: "Champion",      pts: SPECIAL_POINTS.champion     },
+    { key: "viceChampion", label: "Vice-Champion", pts: SPECIAL_POINTS.viceChampion },
+    { key: "goldenBoot",   label: "Golden Boot",   pts: SPECIAL_POINTS.goldenBoot   },
+  ];
+
+  categories.forEach(({ key, label, pts }) => {
+    const actual = specialResults?.[key] ?? "";
+    const tr = document.createElement("tr");
+    let cells = `
+      <td>${label} (${pts} pts)</td>
+      <td>${actual || "—"}</td>`;
+
+    PLAYERS.forEach(player => {
+      const pred = specialPredictions[player.id]?.[key] ?? "";
+      let cellContent, className;
+      if (!actual) {
+        cellContent = pred || "—";
+        className   = "pending";
+      } else if (!pred) {
+        cellContent = "—";
+        className   = "";
+      } else if (actual.toLowerCase() === pred.toLowerCase()) {
+        cellContent = `${pred} (+${pts})`;
+        className   = "exact";
+      } else {
+        cellContent = `${pred} (0)`;
+        className   = "wrong";
+      }
+      cells += `<td class="${className}">${cellContent}</td>`;
+    });
+
+    tr.innerHTML = cells;
+    tbody.appendChild(tr);
+  });
+}
+
 function renderBrackets() {
   const tbody = document.getElementById("brackets-body");
   PLAYERS.forEach(p => {
@@ -245,18 +339,23 @@ function showError(msg) {
 document.addEventListener("DOMContentLoaded", async () => {
   showLoading(true);
   try {
-    const [scheduleRows, resultsRows, predictionsRows] = await Promise.all([
-      fetchSheet("schedule",     SHEET_GIDS.schedule),
-      fetchSheet("results",      SHEET_GIDS.results),
-      fetchSheet("predictions",  SHEET_GIDS.predictions),
+    const [scheduleRows, resultsRows, predictionsRows, specialPredsRows, specialResRows] = await Promise.all([
+      fetchSheet("schedule",            SHEET_GIDS.schedule),
+      fetchSheet("results",             SHEET_GIDS.results),
+      fetchSheet("predictions",         SHEET_GIDS.predictions),
+      fetchSheet("special_predictions", SHEET_GIDS.specialPredictions),
+      fetchSheet("special_results",     SHEET_GIDS.specialResults),
     ]);
 
-    const matches     = buildMatches(scheduleRows);
-    const results     = buildResults(resultsRows);
-    const predictions = buildPredictions(predictionsRows);
+    const matches            = buildMatches(scheduleRows);
+    const results            = buildResults(resultsRows);
+    const predictions        = buildPredictions(predictionsRows);
+    const specialPredictions = buildSpecialPredictions(specialPredsRows);
+    const specialResults     = buildSpecialResults(specialResRows);
 
+    renderSpecialPredictions(specialResults, specialPredictions);
     renderResults(matches, results, predictions);
-    renderStandings(computeStandings(matches, results, predictions));
+    renderStandings(computeStandings(matches, results, predictions, specialResults, specialPredictions));
     renderBrackets();
   } catch (err) {
     showError(`Could not load data. (${err.message})`);

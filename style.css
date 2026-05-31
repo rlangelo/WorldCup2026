@@ -81,8 +81,9 @@ tbody tr:hover           { background: #1c2440; }
   width: 3rem;
 }
 
-/* ── Results table ── */
-#results-wrapper {
+/* ── Results / Special tables ── */
+#results-wrapper,
+#special-wrapper {
   overflow-x: auto;
   border-radius: 6px;
 }
