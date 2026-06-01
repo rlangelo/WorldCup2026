@@ -223,7 +223,7 @@ function computeStandings(matchSets, specialResults, specialPredictions) {
     const specialScore = computeSpecialScore(specialResults, specialPredictions[player.id]);
     const total        = groupScore + koScore + specialScore;
     return { player, total, groupScore, koScore, specialScore };
-  }).sort((a, b) => b.total - a.total);
+  }).sort((a, b) => b.total - a.total || a.player.name.localeCompare(b.player.name));
 }
 
 // ─────────────────────────────────────────────
@@ -244,10 +244,10 @@ function renderStandings(standings) {
     tr.innerHTML = `
       <td>${ordinal(i + 1)}</td>
       <td>${row.player.name}</td>
-      <td>${row.total}</td>
-      <td>${row.groupScore}</td>
-      <td>${row.koScore}</td>
-      <td>${row.specialScore}</td>`;
+      <td>${row.total        ?? 0}</td>
+      <td>${row.groupScore   ?? 0}</td>
+      <td>${row.koScore      ?? 0}</td>
+      <td>${row.specialScore ?? 0}</td>`;
     tbody.appendChild(tr);
   });
 }
