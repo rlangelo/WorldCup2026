@@ -207,18 +207,22 @@ function computeSpecialScore(specialResults, playerPreds) {
   return total;
 }
 
-// matchSets: array of { matches, results, predictions } — one per stage
+// matchSets: [groupStage, knockoutStage] — each is { matches, results, predictions }
 function computeStandings(matchSets, specialResults, specialPredictions) {
   return PLAYERS.map(player => {
-    let total = 0;
-    matchSets.forEach(({ matches, results, predictions }) => {
+    const stageScores = matchSets.map(({ matches, results, predictions }) => {
+      let score = 0;
       matches.forEach(match => {
         const { points } = scoreMatch(results[match.id], predictions[player.id]?.[match.id]);
-        if (points) total += points;
+        if (points) score += points;
       });
+      return score;
     });
-    total += computeSpecialScore(specialResults, specialPredictions[player.id]);
-    return { player, total };
+    const groupScore   = stageScores[0] ?? 0;
+    const koScore      = stageScores[1] ?? 0;
+    const specialScore = computeSpecialScore(specialResults, specialPredictions[player.id]);
+    const total        = groupScore + koScore + specialScore;
+    return { player, total, groupScore, koScore, specialScore };
   }).sort((a, b) => b.total - a.total);
 }
 
@@ -240,7 +244,10 @@ function renderStandings(standings) {
     tr.innerHTML = `
       <td>${ordinal(i + 1)}</td>
       <td>${row.player.name}</td>
-      <td>${row.total}</td>`;
+      <td>${row.total}</td>
+      <td>${row.groupScore}</td>
+      <td>${row.koScore}</td>
+      <td>${row.specialScore}</td>`;
     tbody.appendChild(tr);
   });
 }
