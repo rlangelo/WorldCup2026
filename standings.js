@@ -48,8 +48,8 @@ const SHEET_GIDS = {
   results:            712569962,
   predictions:        1644574011,
   scheduleKo:         554594304,
-  resultsKo:          null,       // fill in gid once tab is created
-  predictionsKo:      null,       // fill in gid once tab is created
+  resultsKo:          880665640,
+  predictionsKo:      355717236,
   specialPredictions: 89695487,
   specialResults:     1115044732,
 };
