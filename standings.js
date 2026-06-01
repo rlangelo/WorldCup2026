@@ -223,7 +223,8 @@ function computeStandings(matchSets, specialResults, specialPredictions) {
     const specialScore = computeSpecialScore(specialResults, specialPredictions[player.id]);
     const total        = groupScore + koScore + specialScore;
     return { player, total, groupScore, koScore, specialScore };
-  }).sort((a, b) => b.total - a.total || a.player.name.localeCompare(b.player.name));
+  }).sort((a, b) => b.total - a.total ||
+    a.player.name.split(" ").slice(-1)[0].localeCompare(b.player.name.split(" ").slice(-1)[0]));
 }
 
 // ─────────────────────────────────────────────
