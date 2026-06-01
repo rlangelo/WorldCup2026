@@ -47,10 +47,14 @@ const SHEET_GIDS = {
   schedule:           0,
   results:            712569962,
   predictions:        1644574011,
+  scheduleKo:         554594304,
+  resultsKo:          null,       // fill in gid once tab is created
+  predictionsKo:      null,       // fill in gid once tab is created
   specialPredictions: 89695487,
   specialResults:     1115044732,
 };
 
+// schedule_ko / results_ko / predictions_ko use the same column format as the group stage tabs
 // special_predictions columns: player_name | champion | vice_champion | golden_boot
 // special_results columns:     champion | vice_champion | golden_boot   (one data row)
 
@@ -68,6 +72,11 @@ async function fetchSheet(name, gid) {
   const res = await fetch(sheetUrl(gid));
   if (!res.ok) throw new Error(`Could not load the "${name}" tab (HTTP ${res.status})`);
   return parseCSV(await res.text());
+}
+
+async function fetchSheetOptional(name, gid) {
+  if (!gid) return [];
+  return fetchSheet(name, gid);
 }
 
 // ── CSV parser ────────────────────────────────
@@ -198,12 +207,15 @@ function computeSpecialScore(specialResults, playerPreds) {
   return total;
 }
 
-function computeStandings(matches, results, predictions, specialResults, specialPredictions) {
+// matchSets: array of { matches, results, predictions } — one per stage
+function computeStandings(matchSets, specialResults, specialPredictions) {
   return PLAYERS.map(player => {
     let total = 0;
-    matches.forEach(match => {
-      const { points } = scoreMatch(results[match.id], predictions[player.id][match.id]);
-      if (points) total += points;
+    matchSets.forEach(({ matches, results, predictions }) => {
+      matches.forEach(match => {
+        const { points } = scoreMatch(results[match.id], predictions[player.id]?.[match.id]);
+        if (points) total += points;
+      });
     });
     total += computeSpecialScore(specialResults, specialPredictions[player.id]);
     return { player, total };
@@ -233,9 +245,9 @@ function renderStandings(standings) {
   });
 }
 
-function renderResults(matches, results, predictions) {
-  const header = document.getElementById("results-header");
-  const tbody  = document.querySelector("#results-table tbody");
+function renderResults(matches, results, predictions, headerId = "results-header", tableId = "results-table") {
+  const header = document.getElementById(headerId);
+  const tbody  = document.querySelector(`#${tableId} tbody`);
 
   PLAYERS.forEach(p => {
     const th = document.createElement("th");
@@ -339,10 +351,17 @@ function showError(msg) {
 document.addEventListener("DOMContentLoaded", async () => {
   showLoading(true);
   try {
-    const [scheduleRows, resultsRows, predictionsRows, specialPredsRows, specialResRows] = await Promise.all([
+    const [
+      scheduleRows, resultsRows, predictionsRows,
+      scheduleKoRows, resultsKoRows, predictionsKoRows,
+      specialPredsRows, specialResRows,
+    ] = await Promise.all([
       fetchSheet("schedule",            SHEET_GIDS.schedule),
       fetchSheet("results",             SHEET_GIDS.results),
       fetchSheet("predictions",         SHEET_GIDS.predictions),
+      fetchSheet("schedule_ko",         SHEET_GIDS.scheduleKo),
+      fetchSheetOptional("results_ko",      SHEET_GIDS.resultsKo),
+      fetchSheetOptional("predictions_ko",  SHEET_GIDS.predictionsKo),
       fetchSheet("special_predictions", SHEET_GIDS.specialPredictions),
       fetchSheet("special_results",     SHEET_GIDS.specialResults),
     ]);
@@ -350,12 +369,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     const matches            = buildMatches(scheduleRows);
     const results            = buildResults(resultsRows);
     const predictions        = buildPredictions(predictionsRows);
+    const matchesKo          = buildMatches(scheduleKoRows);
+    const resultsKo          = buildResults(resultsKoRows);
+    const predictionsKo      = buildPredictions(predictionsKoRows);
     const specialPredictions = buildSpecialPredictions(specialPredsRows);
     const specialResults     = buildSpecialResults(specialResRows);
 
+    renderResults(matches,   results,   predictions);
+    renderResults(matchesKo, resultsKo, predictionsKo, "knockout-header", "knockout-table");
     renderSpecialPredictions(specialResults, specialPredictions);
-    renderResults(matches, results, predictions);
-    renderStandings(computeStandings(matches, results, predictions, specialResults, specialPredictions));
+    renderStandings(computeStandings(
+      [{ matches, results, predictions }, { matches: matchesKo, results: resultsKo, predictions: predictionsKo }],
+      specialResults,
+      specialPredictions,
+    ));
     renderBrackets();
   } catch (err) {
     showError(`Could not load data. (${err.message})`);
