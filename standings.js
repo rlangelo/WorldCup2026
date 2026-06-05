@@ -5,20 +5,7 @@
 // ── Config ────────────────────────────────────
 const SHEET_ID = "2PACX-1vQiCswyzh7OoxCglMTk3tCiOrlVzNsue4Yi1iOHYoTvcPGjtpNS_sSiGjCEznGstW52LuZw7rhkrKoa";
 
-const PLAYERS = [
-  { id: "angelo",      name: "Rafael Angelo",     bracket: "" },
-  { id: "despuig",     name: "Sebas Despuig",      bracket: "" },
-  { id: "duca",        name: "Ruxi Duca",          bracket: "" },
-  { id: "fernandez",   name: "Chris Fernandez",    bracket: "" },
-  { id: "georgiadis",  name: "Kostas Georgiadis",  bracket: "" },
-  { id: "leiro",       name: "Alejandro Leiro",    bracket: "" },
-  { id: "miranda",     name: "Sebas Miranda",      bracket: "" },
-  { id: "ortiz",       name: "Sebas Ortiz",        bracket: "" },
-  { id: "paredes",     name: "Diego Paredes",      bracket: "" },
-  { id: "parra",       name: "Chito Parra",        bracket: "" },
-  { id: "riart",       name: "Nico Riart",         bracket: "" },
-  { id: "vasconcelos", name: "Joao Vasconcelos",   bracket: "" },
-];
+let PLAYERS = []; // populated at runtime from the "list_of_players" sheet tab
 
 const POINTS = {
   exact:       25,
@@ -37,13 +24,12 @@ const POINTS = {
 //  Tab gids (from the #gid= value in the sheet's edit URL):
 //  schedule columns:    match_id | team_a | team_b
 //  results columns:     match_id | score_a | score_b   (leave blank if unplayed)
-//  predictions columns: match_id | angelo | despuig | duca | fernandez |
-//                       georgiadis | leiro | miranda | ortiz |
-//                       paredes | parra | riart | vasconcelos
+//  predictions columns: match_id | <player_id> | ... (one column per player id from list_of_players)
 //                       (each cell formatted as "score_a-score_b", e.g. "2-1")
 // ─────────────────────────────────────────────
 
 const SHEET_GIDS = {
+  listOfPlayers:      605662356,
   schedule:           0,
   results:            712569962,
   predictions:        1644574011,
@@ -108,6 +94,12 @@ function parseCSVRow(line) {
 // ─────────────────────────────────────────────
 //  Data builders
 // ─────────────────────────────────────────────
+
+function buildPlayers(rows) {
+  return rows
+    .filter(r => r.id)
+    .map(r => ({ id: r.id.trim(), name: `${r.first_name.trim()} ${r.last_name.trim()}`, bracket: "" }));
+}
 
 function buildMatches(rows) {
   return rows.map(r => ({
@@ -360,10 +352,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   showLoading(true);
   try {
     const [
+      playerRows,
       scheduleRows, resultsRows, predictionsRows,
       scheduleKoRows, resultsKoRows, predictionsKoRows,
       specialPredsRows, specialResRows,
     ] = await Promise.all([
+      fetchSheet("list_of_players",     SHEET_GIDS.listOfPlayers),
       fetchSheet("schedule",            SHEET_GIDS.schedule),
       fetchSheet("results",             SHEET_GIDS.results),
       fetchSheet("predictions",         SHEET_GIDS.predictions),
@@ -373,6 +367,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       fetchSheet("special_predictions", SHEET_GIDS.specialPredictions),
       fetchSheet("special_results",     SHEET_GIDS.specialResults),
     ]);
+
+    PLAYERS = buildPlayers(playerRows);
 
     const matches            = buildMatches(scheduleRows);
     const results            = buildResults(resultsRows);
