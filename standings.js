@@ -245,6 +245,37 @@ function renderStandings(standings) {
   });
 }
 
+function renderStats(standings, matchSets) {
+  const tbody = document.querySelector("#stats-table tbody");
+  tbody.innerHTML = "";
+
+  standings.forEach(row => {
+    const counts = { exact: 0, goal_diff: 0, winner_goals: 0, loser_goals: 0, winner: 0, wrong: 0 };
+
+    matchSets.forEach(({ matches, results, predictions }) => {
+      matches.forEach(match => {
+        const { tier } = scoreMatch(results[match.id], predictions[row.player.id]?.[match.id]);
+        if (tier && tier !== "pending" && counts[tier] !== undefined) {
+          counts[tier]++;
+        }
+      });
+    });
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${row.player.name}</td>
+      <td>${row.total ?? 0}</td>
+      <td>${counts.exact}</td>
+      <td>${counts.goal_diff}</td>
+      <td>${counts.winner_goals}</td>
+      <td>${counts.loser_goals}</td>
+      <td>${counts.winner}</td>
+      <td>${counts.wrong}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+
 function renderResults(matches, results, predictions, headerId = "results-header", tableId = "results-table") {
   const header = document.getElementById(headerId);
   const tbody  = document.querySelector(`#${tableId} tbody`);
@@ -382,11 +413,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderResults(matches,   results,   predictions);
     renderResults(matchesKo, resultsKo, predictionsKo, "knockout-header", "knockout-table");
     renderSpecialPredictions(specialResults, specialPredictions);
-    renderStandings(computeStandings(
+    const standings = computeStandings(
       [{ matches, results, predictions }, { matches: matchesKo, results: resultsKo, predictions: predictionsKo }],
-      specialResults,
-      specialPredictions,
-    ));
+          specialResults,
+          specialPredictions,
+      );
+    renderStandings(standings);
+    renderStats(standings, [
+      { matches, results, predictions },
+      { matches: matchesKo, results: resultsKo, predictions: predictionsKo },
+      ]);
+    renderStats(standings, [
+      { matches, results, predictions },
+      { matches: matchesKo, results: resultsKo, predictions: predictionsKo },
+    ]);
     renderBrackets();
   } catch (err) {
     showError(`Could not load data. (${err.message})`);
